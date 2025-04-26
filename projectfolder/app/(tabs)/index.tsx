@@ -1,9 +1,10 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, StyleSheet, Platform, Button } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { login, register } from '@/firebase/User';
 
 export default function HomeScreen() {
   return (
@@ -32,6 +33,13 @@ export default function HomeScreen() {
             })}
           </ThemedText>{' '}
           to open developer tools.
+          <Button
+            title="Test sign in"
+            onPress={() => {
+              login('test@email.com', 'password123')
+                .then((res) => console.log(res))
+            }}
+          />
         </ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
