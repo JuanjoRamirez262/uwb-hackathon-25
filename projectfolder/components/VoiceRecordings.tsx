@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
-import type { AppMode } from '@/app/index'; // Adjust based on your file structure
 
 interface Recording {
   id: string;
@@ -10,42 +9,51 @@ interface Recording {
   url: string;
 }
 
-interface VoiceRecordingsProps {
-  mode: AppMode;
-}
-
 const sampleRecordings: Recording[] = [
   {
     id: 'sample-1',
     name: 'Message from Sarah',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-  },
-  {
-    id: 'sample-2',
-    name: 'Reminder from John',
-    url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
-  },
-  {
-    id: 'loved-one-1',
-    name: 'A message from your daughter',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-  },
+    url: require('../assets/Sarah.mp3'), // Local file
+  }
 ];
 
-export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
+export default function VoiceRecordings() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Simulate local storage check
-    setRecordings(sampleRecordings);
-    setTimeout(() => setIsLoading(false), 500); // Fake loading
+    // Simulate loading recordings (e.g., from an API or local storage)
+    const loadRecordings = async () => {
+      setIsLoading(true); // Start loading
+      try {
+        // Simulate a delay (e.g., fetching data)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setRecordings(sampleRecordings); // Set the recordings
+      } catch (error) {
+        console.error('Failed to load recordings:', error);
+      } finally {
+        setIsLoading(false); // Stop loading
+      }
+    };
+
+    loadRecordings();
+
+    return () => {
+      unloadSound();
+    };
   }, []);
 
-  const handlePlayPause = async (id: string, url: string) => {
-    if (currentPlayingId === id) {
+  const unloadSound = async () => {
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+  };
+
+  const handlePlayPause = async (recording: Recording) => {
+    if (currentPlayingId === recording.id) {
       // Pause
       if (soundRef.current) {
         await soundRef.current.pauseAsync();
@@ -60,28 +68,27 @@ export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
       }
 
       // Load new sound
-      const { sound } = await Audio.Sound.createAsync({ uri: url });
-      soundRef.current = sound;
-      await sound.playAsync();
-      setCurrentPlayingId(id);
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          typeof recording.url === 'string' ? { uri: recording.url } : recording.url
+        );
+        soundRef.current = sound;
+        await sound.playAsync();
+        setCurrentPlayingId(recording.id);
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setCurrentPlayingId(null);
-          sound.unloadAsync();
-          soundRef.current = null;
-        }
-      });
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setCurrentPlayingId(null);
+            sound.unloadAsync();
+            soundRef.current = null;
+          }
+        });
+      } catch (error) {
+        console.error('Audio playback error:', error);
+        alert('Failed to play the recording.');
+      }
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-    };
-  }, []);
 
   return (
     <View style={styles.card}>
@@ -106,7 +113,7 @@ export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
               <Text style={styles.recordingText}>{recording.name}</Text>
               <TouchableOpacity
                 style={styles.playButton}
-                onPress={() => handlePlayPause(recording.id, recording.url)}
+                onPress={() => handlePlayPause(recording)}
               >
                 <Ionicons
                   name={currentPlayingId === recording.id ? 'pause' : 'play'}
