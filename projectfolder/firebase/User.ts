@@ -1,29 +1,31 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { db } from "./firebase";
+
 async function login(email: string, password: string) {
-  const user = await getDoc(doc(db, "users", email));
-  if (user.exists()) {
-    const userData = user.data();
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("email", "==", email));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    const userDoc = querySnapshot.docs[0];
+    const userData = userDoc.data();
+    localStorage.setItem("user_id",userDoc.id);
     if (userData.password === password) {
-      console.log(`Logged in with email: ${email}`);
-      return { email: email, type: userData.type };
+      return { email: userData.email, type: userData.type, id: userDoc.id };
     }
-    console.log("Incorrect password");
   }
   return null;
 }
-async function register(
-  email: string,
-  password: string,
-  type?: "family" | "patient"
-) {
-  await setDoc(doc(db, "users", email), {
+
+async function register(email: string, password: string, type?: "family" | "patient") {
+  const usersRef = collection(db, "users");
+  const doc = await addDoc(usersRef, {
     email: email,
     createdAt: new Date(),
     password: password,
     type: type ? type : "family",
   });
-  console.log(`Registered with email: ${email}`);
+  localStorage.setItem("user_id",email);
   return true;
 }
+
 export { login, register };
