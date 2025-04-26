@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import type { AppMode } from '@/app/index'; // Correct your import based on your app!
 
 interface Note {
   id: string;
@@ -10,12 +11,16 @@ interface Note {
   lastModified: string;
 }
 
-export default function Notes() {
+interface NotesProps {
+  mode: AppMode;
+}
+
+export default function Notes({ mode }: NotesProps) {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [newNoteTitle, setNewNoteTitle] = useState('');
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [isModalOpen, setModalOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
@@ -23,98 +28,102 @@ export default function Notes() {
 
   const openNewNoteModal = () => {
     setEditingNote(null);
-    setNewNoteTitle('');
-    setNewNoteContent('');
-    setModalOpen(true);
+    setTitle('');
+    setContent('');
+    setIsModalVisible(true);
   };
 
   const openEditNoteModal = (note: Note) => {
-    setEditingNote({ ...note });
-    setModalOpen(true);
+    setEditingNote(note);
+    setTitle(note.title);
+    setContent(note.content);
+    setIsModalVisible(true);
   };
 
   const handleSaveNote = () => {
-    const title = editingNote ? editingNote.title : newNoteTitle.trim();
-    const content = editingNote ? editingNote.content : newNoteContent.trim();
-    const id = editingNote ? editingNote.id : Date.now().toString();
-
-    if (title && content) {
-      const now = new Date().toISOString();
-      const savedNote: Note = {
-        id,
-        title,
-        content,
-        lastModified: now,
-      };
-
-      const updatedNotes = editingNote
-        ? notes.map(note => note.id === id ? savedNote : note)
-        : [...notes, savedNote];
-
-      setNotes(updatedNotes);
-      setModalOpen(false);
-      setNewNoteTitle('');
-      setNewNoteContent('');
-      setEditingNote(null);
-    } else {
-      alert('Please provide both title and content.');
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('Error', 'Please fill out both the title and content.');
+      return;
     }
+
+    if (editingNote) {
+      // Update
+      setNotes(prev => prev.map(n =>
+        n.id === editingNote.id
+          ? { ...n, title: title.trim(), content: content.trim(), lastModified: new Date().toISOString() }
+          : n
+      ));
+      Alert.alert('Success', 'Note updated.');
+    } else {
+      // Add
+      const newNote: Note = {
+        id: Date.now().toString(),
+        title: title.trim(),
+        content: content.trim(),
+        lastModified: new Date().toISOString(),
+      };
+      setNotes(prev => [...prev, newNote]);
+      Alert.alert('Success', 'Note saved.');
+    }
+
+    setTitle('');
+    setContent('');
+    setEditingNote(null);
+    setIsModalVisible(false);
   };
 
   const handleDeleteNote = (id: string) => {
-    setNotes(notes.filter(note => note.id !== id));
+    setNotes(prev => prev.filter(note => note.id !== id));
     setEditingNote(null);
-    setModalOpen(false);
+    setIsModalVisible(false);
+    Alert.alert('Deleted', 'Note deleted.');
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="document-text-outline" size={24} color="#15803D" />
-            <Text style={styles.headerTitle}>Notes</Text>
-          </View>
-          <TouchableOpacity style={styles.addButton} onPress={openNewNoteModal}>
-            <Ionicons name="add-circle-outline" size={28} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Your Notes</Text>
-
-        {sortedNotes.length === 0 ? (
-          <Text style={styles.noNotes}>No notes saved yet.</Text>
-        ) : (
-          <FlatList
-            data={sortedNotes}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.noteCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.noteTitle}>{item.title}</Text>
-                  <Text style={styles.noteDate}>
-                    Last modified: {format(new Date(item.lastModified), 'PPP p')}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => openEditNoteModal(item)}>
-                  <Ionicons name="eye-outline" size={24} color="#4B5563" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteNote(item.id)}>
-                  <Ionicons name="trash-outline" size={24} color="red" style={{ marginLeft: 8 }} />
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-        )}
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>📝 Notes</Text>
+        <TouchableOpacity style={styles.addButton} onPress={openNewNoteModal}>
+          <Ionicons name="add-circle-outline" size={24} color="white" />
+          <Text style={styles.buttonText}>New</Text>
+        </TouchableOpacity>
       </View>
 
+      {/* Notes List */}
+      <ScrollView style={{ marginTop: 20 }}>
+        {sortedNotes.length === 0 ? (
+          <Text style={styles.noNotesText}>No notes yet.</Text>
+        ) : (
+          sortedNotes.map(note => (
+            <View key={note.id} style={styles.noteItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.noteTitle}>{note.title}</Text>
+                <Text numberOfLines={1} style={styles.noteContent}>{note.content}</Text>
+                <Text style={styles.noteDate}>Last modified: {format(new Date(note.lastModified), 'PPP p')}</Text>
+              </View>
+
+              <View style={styles.noteActions}>
+                <TouchableOpacity onPress={() => openEditNoteModal(note)}>
+                  <Ionicons
+                    name={mode === 'patient' ? 'create-outline' : 'create-outline'}
+                    size={24}
+                    color="#4B5563"
+                  />
+                </TouchableOpacity>
+                {mode === 'family' && (
+                  <TouchableOpacity onPress={() => handleDeleteNote(note.id)} style={{ marginLeft: 10 }}>
+                    <Ionicons name="trash-outline" size={24} color="red" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+
       {/* Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalOpen}
-        onRequestClose={() => setModalOpen(false)}
-      >
+      <Modal visible={isModalVisible} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
@@ -123,143 +132,146 @@ export default function Notes() {
 
             <TextInput
               style={styles.input}
-              placeholder="Note Title"
-              value={editingNote ? editingNote.title : newNoteTitle}
-              onChangeText={(text) => editingNote ? setEditingNote({ ...editingNote, title: text }) : setNewNoteTitle(text)}
+              placeholder="Title"
+              value={title}
+              onChangeText={setTitle}
             />
             <TextInput
-              style={[styles.input, { height: 120 }]}
-              placeholder="Write your note..."
-              value={editingNote ? editingNote.content : newNoteContent}
-              onChangeText={(text) => editingNote ? setEditingNote({ ...editingNote, content: text }) : setNewNoteContent(text)}
+              style={[styles.input, { minHeight: 100 }]}
+              placeholder="Content"
+              value={content}
               multiline
+              onChangeText={setContent}
             />
 
             <View style={styles.modalButtons}>
-              {editingNote && (
-                <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteNote(editingNote.id)}>
-                  <Text style={styles.deleteButtonText}>Delete</Text>
+              {mode === 'family' && editingNote && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteNote(editingNote.id)}
+                >
+                  <Text style={styles.buttonText}>Delete</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveNote}>
-                <Text style={styles.saveButtonText}>
-                  {editingNote ? 'Save Changes' : 'Save Note'}
-                </Text>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveNote}
+              >
+                <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
 
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-  },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     padding: 16,
+    marginVertical: 12,
     borderRadius: 12,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#15803D',
-    marginLeft: 8,
   },
   addButton: {
-    backgroundColor: '#15803D',
-    borderRadius: 50,
-    padding: 8,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  noNotes: {
-    textAlign: 'center',
-    color: '#6B7280',
-    paddingVertical: 12,
-  },
-  noteCard: {
     flexDirection: 'row',
+    backgroundColor: '#15803D',
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    backgroundColor: '#E5E7EB',
     padding: 12,
-    marginVertical: 6,
+    marginBottom: 10,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   noteTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  noteDate: {
+  noteContent: {
     color: '#6B7280',
     marginTop: 2,
+  },
+  noteDate: {
     fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  noteActions: {
+    flexDirection: 'row',
+    marginLeft: 10,
+  },
+  noNotesText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    marginTop: 20,
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: 16,
+    justifyContent: 'center',
+    padding: 20,
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
     padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
+    borderRadius: 8,
+    marginVertical: 6,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 20,
   },
   saveButton: {
     backgroundColor: '#15803D',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     flex: 1,
-    marginLeft: 8,
-  },
-  saveButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: '600',
+    marginLeft: 5,
+    alignItems: 'center',
   },
   deleteButton: {
     backgroundColor: '#EF4444',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
   },
-  deleteButtonText: {
+  buttonText: {
     color: 'white',
-    textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 });
