@@ -1,10 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import type { AppMode } from '@/app/index'; // Adjust based on your file structure
 
-// Sample recordings (replace with real ones later)
-const sampleRecordings = [
+interface Recording {
+  id: string;
+  name: string;
+  url: string;
+}
+
+interface VoiceRecordingsProps {
+  mode: AppMode;
+}
+
+const sampleRecordings: Recording[] = [
   {
     id: 'sample-1',
     name: 'Message from Sarah',
@@ -15,164 +25,156 @@ const sampleRecordings = [
     name: 'Reminder from John',
     url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
   },
+  {
+    id: 'loved-one-1',
+    name: 'A message from your daughter',
+    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  },
 ];
 
-interface Recording {
-  id: string;
-  name: string;
-  url: string;
-}
-
-export default function VoiceRecordings() {
+export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Only set sample data if recordings are empty
-    if (recordings.length === 0) {
-      setRecordings(sampleRecordings);
-    }
-    return () => {
-      unloadSound();
-    };
+    // Simulate local storage check
+    setRecordings(sampleRecordings);
+    setTimeout(() => setIsLoading(false), 500); // Fake loading
   }, []);
 
-  const unloadSound = async () => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-      soundRef.current = null;
-    }
-  };
-
-  const handlePlayPause = async (recording: Recording) => {
-    if (currentPlayingId === recording.id) {
+  const handlePlayPause = async (id: string, url: string) => {
+    if (currentPlayingId === id) {
       // Pause
       if (soundRef.current) {
         await soundRef.current.pauseAsync();
         setCurrentPlayingId(null);
       }
     } else {
-      try {
-        setIsLoading(true);
-        await unloadSound();
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: recording.url },
-          { shouldPlay: true }
-        );
-        soundRef.current = sound;
-        setCurrentPlayingId(recording.id);
-
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setCurrentPlayingId(null);
-          }
-        });
-
-      } catch (error) {
-        console.error('Audio playback error:', error);
-        alert('Failed to play the recording.');
-      } finally {
-        setIsLoading(false);
+      // Stop previous sound
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
       }
+
+      // Load new sound
+      const { sound } = await Audio.Sound.createAsync({ uri: url });
+      soundRef.current = sound;
+      await sound.playAsync();
+      setCurrentPlayingId(id);
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setCurrentPlayingId(null);
+          sound.unloadAsync();
+          soundRef.current = null;
+        }
+      });
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Ionicons name="volume-high-outline" size={24} color="#15803D" />
-          <Text style={styles.headerTitle}>Voice Recordings</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Listen to Recordings</Text>
-
-        {isLoading && (
-          <ActivityIndicator size="large" color="#15803D" style={{ marginVertical: 16 }} />
-        )}
-
-        {recordings.length === 0 ? (
-          <Text style={styles.emptyText}>No recordings available yet. Ask a loved one to add one!</Text>
-        ) : (
-          <FlatList
-            data={recordings}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.recordingCard}>
-                <Text style={styles.recordingName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <TouchableOpacity
-                  style={styles.playButton}
-                  onPress={() => handlePlayPause(item)}
-                >
-                  {currentPlayingId === item.id ? (
-                    <Ionicons name="pause" size={24} color="#15803D" />
-                  ) : (
-                    <Ionicons name="play" size={24} color="#15803D" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-        )}
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Ionicons name="volume-high-outline" size={24} color="#15803D" />
+        <Text style={styles.headerText}>Voice Recordings from Loved Ones</Text>
       </View>
-    </ScrollView>
+
+      <Text style={styles.subHeader}>Listen to Recordings</Text>
+
+      {isLoading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator size="large" color="#15803D" />
+          <Text style={{ marginTop: 8, color: '#6B7280' }}>Loading recordings...</Text>
+        </View>
+      ) : recordings.length === 0 ? (
+        <Text style={styles.noDataText}>No recordings available yet. Ask a loved one to add one!</Text>
+      ) : (
+        <ScrollView style={{ maxHeight: 300 }}>
+          {recordings.map((recording) => (
+            <View key={recording.id} style={styles.recordingItem}>
+              <Text style={styles.recordingText}>{recording.name}</Text>
+              <TouchableOpacity
+                style={styles.playButton}
+                onPress={() => handlePlayPause(recording.id, recording.url)}
+              >
+                <Ionicons
+                  name={currentPlayingId === recording.id ? 'pause' : 'play'}
+                  size={24}
+                  color="#15803D"
+                />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-  },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     padding: 16,
+    marginVertical: 12,
     borderRadius: 12,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 10,
   },
-  headerTitle: {
-    fontSize: 24,
+  headerText: {
+    fontSize: 22,
     fontWeight: 'bold',
-    marginLeft: 8,
     color: '#15803D',
   },
-  sectionTitle: {
-    fontSize: 20,
+  subHeader: {
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    marginVertical: 24,
-  },
-  recordingCard: {
-    flexDirection: 'row',
+  loader: {
+    height: 150,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+  },
+  noDataText: {
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  recordingItem: {
+    backgroundColor: '#E5E7EB',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  recordingName: {
-    flex: 1,
+  recordingText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
+    flexShrink: 1,
   },
   playButton: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#ECFDF5',
     padding: 8,
-    borderRadius: 8,
+    borderRadius: 50,
   },
 });
-

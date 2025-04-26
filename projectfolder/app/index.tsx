@@ -1,48 +1,71 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import VoiceRecordings from "@/components/VoiceRecordings";
-import TodoList from "@/components/TodoList";
-import CalendarView from "@/components/CalendarView";
-import Journal from "@/components/Journal";
-import Notes from "@/components/Notes";
-import MedicationList from "@/components/MedicationList";
+import React, { useState } from 'react';
+import { View, Text, Switch, ScrollView, StyleSheet } from 'react-native';
+import VoiceRecordings from '@/components/VoiceRecordings';
+import TodoList from '@/components/TodoList';
+import CalendarView from '@/components/CalendarView';
+import Journal from '@/components/Journal';
+import Notes from '@/components/Notes';
+import MedicationList from '@/components/MedicationList';
 
-export default function Home() {
+export type AppMode = 'patient' | 'family';
+
+export default function HomeScreen() {
+  const [mode, setMode] = useState<AppMode>('patient');
+
+  const handleModeToggle = (value: boolean) => {
+    setMode(value ? 'family' : 'patient');
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>MemoryLane Dashboard</Text>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <Text style={styles.title}>MemoryLane Dashboard</Text>
 
+        {/* Mode Toggle */}
+        <View style={styles.toggleContainer}>
+          <Text style={styles.label}>Patient Mode</Text>
+          <Switch
+            value={mode === 'family'}
+            onValueChange={handleModeToggle}
+          />
+          <Text style={styles.label}>Family Mode</Text>
+        </View>
+      </View>
+
+      {/* Content Sections */}
       <View style={styles.section}>
-        <VoiceRecordings />
+        <VoiceRecordings mode={mode} />
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.section}>
-        <TodoList />
+        <TodoList mode={mode} />
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.section}>
-        <CalendarView />
+        <CalendarView mode={mode} />
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.section}>
-        <Journal />
+        <Journal mode={mode} />
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.section}>
-        <Notes />
+        <Notes mode={mode} />
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.section}>
-        <MedicationList />
+        <MedicationList mode={mode} />
       </View>
     </ScrollView>
   );
@@ -50,35 +73,37 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16, 
-    paddingTop: 32,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    marginBottom: 24,
     alignItems: 'center',
-    backgroundColor: '#F0F0F0', // or your secondary background color
   },
   title: {
-    fontSize: 32, // similar to text-4xl
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 24,
+    color: '#15803D',
+    marginBottom: 16,
     textAlign: 'center',
-    color: '#15803D', // text-green-700
-    backgroundColor: '#FFFFFF', // primary background if you want
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E5E7EB',
+    padding: 8,
     borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 3, // for shadow
+  },
+  label: {
+    fontSize: 16,
+    marginHorizontal: 8,
   },
   section: {
-    width: '100%',
-    maxWidth: 800, // similar to max-w-5xl
+    marginVertical: 16,
   },
   separator: {
-    height: 8,
-    backgroundColor: '#D1D5DB', // bg-border
-    borderRadius: 999,
-    marginVertical: 16,
-    width: '100%',
-    maxWidth: 800,
+    height: 1,
+    backgroundColor: '#D1D5DB',
+    marginVertical: 8,
   },
 });
-

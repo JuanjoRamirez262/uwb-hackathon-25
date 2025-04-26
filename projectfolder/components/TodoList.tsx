@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { AppMode } from '@/app/index'; // Correct import for your app
 
 interface TodoItem {
   id: string;
@@ -8,11 +9,17 @@ interface TodoItem {
   completed: boolean;
 }
 
-export default function TodoList() {
+interface TodoListProps {
+  mode: AppMode;
+}
+
+export default function TodoList({ mode }: TodoListProps) {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [newTodoText, setNewTodoText] = useState('');
 
   const handleAddTodo = () => {
+    if (mode !== 'family') return;
+
     if (newTodoText.trim()) {
       const newTodo: TodoItem = {
         id: Date.now().toString(),
@@ -21,155 +28,172 @@ export default function TodoList() {
       };
       setTodos([...todos, newTodo]);
       setNewTodoText('');
+      Alert.alert('To-Do Added', `"${newTodo.text}" added to the list.`);
     } else {
-      alert('Please write a task.');
+      Alert.alert('Cannot Add Empty To-Do');
     }
   };
 
   const handleToggleComplete = (id: string) => {
     setTodos(
-      todos.map(todo =>
+      todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
       )
     );
   };
 
   const handleDeleteTodo = (id: string) => {
+    if (mode !== 'family') return;
+
+    const todoToDelete = todos.find(todo => todo.id === id);
     setTodos(todos.filter(todo => todo.id !== id));
+    if (todoToDelete) {
+      Alert.alert('To-Do Removed', `"${todoToDelete.text}" removed from the list.`);
+    }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Ionicons name="list-outline" size={24} color="#15803D" />
-          <Text style={styles.headerTitle}>To-Do List</Text>
-        </View>
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>✅ To-Do List</Text>
+      </View>
 
-        {/* Add Todo */}
-        <View style={styles.inputContainer}>
+      {/* Family Mode Add Todo */}
+      {mode === 'family' && (
+        <View style={styles.addTodoSection}>
           <TextInput
             style={styles.input}
+            placeholder="Add a new task..."
             value={newTodoText}
             onChangeText={setNewTodoText}
-            placeholder="Add a new task..."
           />
           <TouchableOpacity style={styles.addButton} onPress={handleAddTodo}>
-            <Ionicons name="add-circle-outline" size={28} color="white" />
+            <Ionicons name="add-circle-outline" size={24} color="white" />
+            <Text style={styles.buttonText}>Add</Text>
           </TouchableOpacity>
         </View>
+      )}
 
-        {/* Todo Items */}
-        <View style={{ marginTop: 16 }}>
-          <Text style={styles.sectionTitle}>Your Tasks</Text>
+      {/* List */}
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.subHeader}>Your Tasks</Text>
+        {todos.length === 0 ? (
+          <Text style={styles.noTasksText}>No tasks added yet.</Text>
+        ) : (
+          <ScrollView style={{ maxHeight: 300 }}>
+            {todos.map((todo) => (
+              <View key={todo.id} style={styles.todoItem}>
+                <TouchableOpacity
+                  onPress={() => handleToggleComplete(todo.id)}
+                  style={[
+                    styles.checkbox,
+                    todo.completed && styles.checkboxCompleted
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.todoText,
+                    todo.completed && styles.todoCompleted
+                  ]}
+                >
+                  {todo.text}
+                </Text>
 
-          {todos.length === 0 ? (
-            <Text style={styles.emptyMessage}>No tasks added yet.</Text>
-          ) : (
-            <FlatList
-              data={todos}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.todoCard}>
-                  <TouchableOpacity onPress={() => handleToggleComplete(item.id)}>
-                    {item.completed ? (
-                      <Ionicons name="checkbox-outline" size={28} color="#15803D" />
-                    ) : (
-                      <Ionicons name="square-outline" size={28} color="#6B7280" />
-                    )}
-                  </TouchableOpacity>
-
-                  <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text
-                      style={[
-                        styles.todoText,
-                        item.completed && styles.completedTodo
-                      ]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {item.text}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity onPress={() => handleDeleteTodo(item.id)}>
+                {mode === 'family' && (
+                  <TouchableOpacity onPress={() => handleDeleteTodo(todo.id)}>
                     <Ionicons name="trash-outline" size={24} color="red" />
                   </TouchableOpacity>
-                </View>
-              )}
-            />
-          )}
-        </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-  },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     padding: 16,
+    marginVertical: 12,
     borderRadius: 12,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#15803D',
-    marginLeft: 8,
   },
-  inputContainer: {
+  addTodoSection: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    padding: 8,
-    borderRadius: 8,
+    marginTop: 10,
+    gap: 8,
   },
   input: {
     flex: 1,
-    backgroundColor: 'transparent',
-    fontSize: 16,
-    padding: 8,
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
   },
   addButton: {
+    flexDirection: 'row',
     backgroundColor: '#15803D',
-    padding: 8,
+    padding: 12,
     borderRadius: 8,
-    marginLeft: 8,
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 20,
+  buttonText: {
+    color: 'white',
+    marginLeft: 6,
+    fontWeight: 'bold',
+  },
+  subHeader: {
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  emptyMessage: {
+  noTasksText: {
     textAlign: 'center',
     color: '#6B7280',
-    paddingVertical: 12,
+    marginTop: 10,
   },
-  todoCard: {
+  todoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
+    backgroundColor: '#E5E7EB',
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderColor: '#9CA3AF',
+    borderWidth: 2,
+    marginRight: 12,
+  },
+  checkboxCompleted: {
+    backgroundColor: '#15803D',
   },
   todoText: {
+    flex: 1,
     fontSize: 16,
-    fontWeight: '500',
   },
-  completedTodo: {
+  todoCompleted: {
     textDecorationLine: 'line-through',
     color: '#6B7280',
   },
 });
+
