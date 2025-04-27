@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import type { AppMode } from '@/app/index';
 
 interface Recording {
   id: string;
@@ -17,7 +18,11 @@ const sampleRecordings: Recording[] = [
   }
 ];
 
-export default function VoiceRecordings() {
+interface VoiceRecordingsProps {
+  mode: AppMode;
+}
+
+export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
