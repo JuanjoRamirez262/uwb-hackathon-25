@@ -21,7 +21,7 @@ const data = [
     // Quan
     id: '3',
     image: require('../assets/image3.png'),
-    description: 'Hey Pops, I\m John, your son',
+    description: 'Hey Pops, I\'m John, your son',
   },
   {
     // Juan

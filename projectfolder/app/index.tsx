@@ -21,17 +21,7 @@ export default function HomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.title}>MemoryLane Dashboard</Text>
-
-        {/* Mode Toggle */}
-        <View style={styles.toggleContainer}>
-          <Text style={styles.label}>Patient Mode</Text>
-          <Switch
-            value={mode === 'family'}
-            onValueChange={handleModeToggle}
-          />
-          <Text style={styles.label}>Family Mode</Text>
-        </View>
+        <Text style={styles.title}>Hi Tod, welcome to your life!</Text>
       </View>
 
       {/* Content Sections */}
@@ -72,6 +62,15 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <MedicationList mode={mode} />
       </View>
+
+      <View style={styles.toggleContainer}>
+          <Text style={styles.label}>Patient Mode</Text>
+          <Switch
+            value={mode === 'family'}
+            onValueChange={handleModeToggle}
+          />
+          <Text style={styles.label}>Family Mode</Text>
+        </View>
     </ScrollView>
   );
 }
@@ -82,7 +81,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    marginBottom: 24,
+    marginTop: 24,
+    marginBottom: 0,
     alignItems: 'center',
   },
   title: {
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   section: {
-    marginVertical: 16,
+    marginVertical: 0,
   },
   separator: {
     height: 1,

@@ -99,10 +99,10 @@ export default function VoiceRecordings({ mode }: VoiceRecordingsProps) {
     <View style={styles.card}>
       <View style={styles.header}>
         <Ionicons name="volume-high-outline" size={24} color="#15803D" />
-        <Text style={styles.headerText}>Voice Recordings from Loved Ones</Text>
+        <Text style={styles.headerText}>This people realy love you!</Text>
       </View>
 
-      <Text style={styles.subHeader}>Listen to Recordings</Text>
+      <Text style={styles.subHeader}>They want to say hi!</Text>
 
       {isLoading ? (
         <View style={styles.loader}>
