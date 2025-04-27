@@ -6,6 +6,7 @@ import CalendarView from '@/components/CalendarView';
 import Journal from '@/components/Journal';
 import Notes from '@/components/Notes';
 import MedicationList from '@/components/MedicationList';
+import Carousel from '@/components/Carousel';
 
 export type AppMode = 'patient' | 'family';
 
@@ -36,6 +37,10 @@ export default function HomeScreen() {
       {/* Content Sections */}
       <View style={styles.section}>
         <VoiceRecordings mode={mode} />
+      </View>
+
+      <View style={styles.section}>
+        <Carousel />
       </View>
 
       <View style={styles.separator} />
@@ -104,6 +109,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#D1D5DB',
-    marginVertical: 8,
+    marginVertical: 16,
   },
 });
